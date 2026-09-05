@@ -175,6 +175,13 @@ with a persistent volume (`pkay-tui-volume` at `/data`) and
 |----------|---------|
 | `PORT` | Listening port (Railway sets it automatically) |
 | `DATABASE_PATH` | SQLite file location (e.g. `/data/db.sqlite` for a volume) |
+| `ADMIN_USERNAME` | Admin username for the `/admin` HTTP API (default `admin`) |
+| `ADMIN_PASSWORD` | Admin password for the `/admin` HTTP API (default `admin` — set this in production) |
+
+The deployed instance is managed remotely through the **admin HTTP API**
+(`POST /admin/login`, then `POST /admin/providers`, `POST /admin/users`,
+`POST /admin/users/<name>/keys`, … — full reference in `docs/api.md` §3). It
+keeps its own database on the volume, separate from the local CLI's.
 
 ```bash
 railway init --name <project>

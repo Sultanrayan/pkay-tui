@@ -13,8 +13,9 @@
 //! Request bodies are buffered so failover retries can replay them to the
 //! next provider key.
 
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use axum::body::{to_bytes, Body};
 use axum::extract::{ConnectInfo, Request, State};
@@ -47,6 +48,8 @@ pub struct ProxyState {
     pub limiter: RwLock<RateLimiter>,
     pub bot: RwLock<BotProtect>,
     pub lb: RwLock<LoadBalancer>,
+    /// Admin session tokens (token -> expiry).
+    pub admin_sessions: RwLock<HashMap<String, Instant>>,
 }
 
 impl ProxyState {
@@ -72,6 +75,7 @@ impl ProxyState {
             limiter: RwLock::new(limiter),
             bot: RwLock::new(bot),
             lb: RwLock::new(lb),
+            admin_sessions: RwLock::new(HashMap::new()),
         }
     }
 }
@@ -93,6 +97,10 @@ impl ProxyError {
 /// Catch-all handler. All requests that reach the server are routed here and
 /// handled based on the URL path (`/{provider}/{...}`).
 pub async fn proxy_handler(State(state): State<Arc<ProxyState>>, req: Request) -> Response {
+    // Admin API (login + management). Routed before the proxy pipeline.
+    if req.uri().path().starts_with("/admin") {
+        return crate::admin::handle_admin(&state, req).await;
+    }
     // Liveness endpoint for platform health checks (no auth required).
     if req.uri().path() == "/health" {
         let body = serde_json::json!({"status": "ok"}).to_string();

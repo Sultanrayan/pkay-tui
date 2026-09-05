@@ -152,6 +152,19 @@ Responses are **streamed** to the client: as soon as the provider emits data
 retriable error responses (401/403/429/5xx) are buffered, and only so failover
 can fall back to the next key with the last error body.
 
+## Admin HTTP API
+
+The proxy exposes an admin API under `/admin` (implemented in
+`rust-core/src/admin.rs`), so the **deployed** instance can be managed remotely
+without the Java CLI. Admin sessions are in-memory bearer tokens
+(`ProxyState.admin_sessions`); login checks the `admin` config section (env
+overrides: `ADMIN_USERNAME` / `ADMIN_PASSWORD`). All management operations go
+through the same SQLite store the proxy reads, so providers/keys/users created
+over the API take effect immediately. Password hashes (`sha256:<salt>:<hash>`)
+and user keys (`pkay_...`) match the Java admin layer's formats, so local CLI
+and remote API can operate on the same database interchangeably. See
+`docs/api.md` §3 for the full endpoint list.
+
 ## Known simplifications / future work
 
 - Request bodies are buffered in memory so failover retries can replay them to

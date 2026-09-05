@@ -6,6 +6,7 @@
 //! implemented yet; add them behind a cargo feature that depends on the `jni`
 //! crate when needed.
 
+pub mod admin;
 pub mod bot_protect;
 pub mod config;
 pub mod db;

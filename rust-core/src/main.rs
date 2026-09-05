@@ -1,3 +1,4 @@
+mod admin;
 mod bot_protect;
 mod config;
 mod db;
@@ -40,7 +41,21 @@ async fn main() {
         i += 1;
     }
 
-    let config = Arc::new(config::Config::load(&config_path));
+    let mut config = config::Config::load(&config_path);
+
+    // Allow the admin credentials to come from the environment (used on
+    // production so the deployed instance does not use the default password).
+    if let Ok(u) = std::env::var("ADMIN_USERNAME") {
+        if !u.is_empty() {
+            config.admin.username = u;
+        }
+    }
+    if let Ok(p) = std::env::var("ADMIN_PASSWORD") {
+        if !p.is_empty() {
+            config.admin.password = p;
+        }
+    }
+    let config = Arc::new(config);
 
     // Allow the database location to come from the environment (e.g. a
     // persistent volume mounted by the platform).

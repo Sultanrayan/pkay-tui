@@ -145,7 +145,44 @@ java -jar java-admin/target/api-pool-admin.jar generate-key --user alice --tier 
 
 `--user` accepts either the user id or the username where noted.
 
-## 3. Deployment (Railway)
+## 3. Admin HTTP API (deployed instance)
+
+The proxy exposes a JSON admin API under `/admin` so the deployed instance can
+be managed remotely. Auth: `POST /admin/login` returns a session token; all
+other endpoints require `Authorization: Bearer <token>` (token lasts
+`admin.token_duration_days`, default 7). Credentials come from the `admin`
+section of `config.json`, overridable with the `ADMIN_USERNAME` /
+`ADMIN_PASSWORD` environment variables.
+
+| Method & path | Body | Description |
+|---------------|------|-------------|
+| `POST /admin/login` | `{"username", "password"}` | Login, returns `{"token", ...}` |
+| `POST /admin/logout` | — | Invalidate the current token |
+| `GET /admin/providers` | — | List providers with models + masked keys |
+| `POST /admin/providers` | `{"name", "url"}` | Add a provider |
+| `DELETE /admin/providers/{name}` | — | Delete a provider (and its keys/models) |
+| `POST /admin/providers/{name}/keys` | `{"key", "auth_header"?}` | Add a provider key (`auth_header` e.g. `x-goog-api-key`) |
+| `DELETE /admin/providers/{name}/keys/{id}` | — | Remove a provider key |
+| `POST /admin/providers/{name}/models` | `{"models": [...]}` | Import models (strings or `{"name": ...}` objects; duplicates skipped) |
+| `GET /admin/users` | — | List users with masked keys |
+| `POST /admin/users` | `{"username", "password", "tier"?}` | Create a user |
+| `POST /admin/users/{name}/keys` | `{"tier"?, "max_limit"?}` | Generate a user key (returned once) |
+| `POST /admin/keys/revoke` | `{"key"}` | Revoke a user key |
+| `GET /admin/stats` | — | Counts (users, keys, requests) + recent logs |
+
+All responses are JSON; errors look like `{"error": "...", "status": 401}`.
+Provider keys and user keys are masked in list responses (e.g. `sk-or-…abcd`);
+generated user keys are shown in full exactly once.
+
+```bash
+# quick example
+curl -X POST https://<host>/admin/login -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"..."}'
+curl -X POST https://<host>/admin/providers -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' -d '{"name":"openrouter","url":"https://openrouter.ai/api/v1"}'
+```
+
+## 4. Deployment (Railway)
 
 The proxy is deployable as a container (`Dockerfile` at the repo root,
 `railway.json` configures the health check). Deploy with the Railway CLI:
@@ -158,20 +195,20 @@ railway domain          # get the public URL
 
 Environment variables:
 
-| Variable        | Purpose                                              |
-|-----------------|------------------------------------------------------|
-| `PORT`          | Listening port (Railway sets this automatically)     |
-| `DATABASE_PATH` | SQLite file location, e.g. `/data/db.sqlite` for a Railway volume |
+| Variable         | Purpose                                              |
+|------------------|------------------------------------------------------|
+| `PORT`           | Listening port (Railway sets this automatically)     |
+| `DATABASE_PATH`  | SQLite file location, e.g. `/data/db.sqlite` for a Railway volume |
+| `ADMIN_USERNAME` | Admin username for `/admin` API (default: `admin`)   |
+| `ADMIN_PASSWORD` | Admin password for `/admin` API (default: `admin` — set this in production!) |
 
 `GET /health` (no auth) returns `{"status":"ok"}` and is used by the platform
 health check.
 
-> Note: the Java admin CLI manages the *local* SQLite database. The deployed
-> instance keeps its own database (on the volume), so populating it currently
-> requires a remote admin path (e.g. an admin HTTP API) — see
-> `docs/architecture.md` "Known simplifications / future work".
+> The deployed instance is managed entirely via the admin HTTP API above — it
+> has its own database on the volume, separate from the local CLI's.
 
-## 4. Local test setup
+## 5. Local test setup
 
 A mock provider server is included so the system can be tested without real API
 keys:
