@@ -145,7 +145,33 @@ java -jar java-admin/target/api-pool-admin.jar generate-key --user alice --tier 
 
 `--user` accepts either the user id or the username where noted.
 
-## 3. Local test setup
+## 3. Deployment (Railway)
+
+The proxy is deployable as a container (`Dockerfile` at the repo root,
+`railway.json` configures the health check). Deploy with the Railway CLI:
+
+```bash
+railway init --name <project>
+railway up -y -d --service <service>
+railway domain          # get the public URL
+```
+
+Environment variables:
+
+| Variable        | Purpose                                              |
+|-----------------|------------------------------------------------------|
+| `PORT`          | Listening port (Railway sets this automatically)     |
+| `DATABASE_PATH` | SQLite file location, e.g. `/data/db.sqlite` for a Railway volume |
+
+`GET /health` (no auth) returns `{"status":"ok"}` and is used by the platform
+health check.
+
+> Note: the Java admin CLI manages the *local* SQLite database. The deployed
+> instance keeps its own database (on the volume), so populating it currently
+> requires a remote admin path (e.g. an admin HTTP API) — see
+> `docs/architecture.md` "Known simplifications / future work".
+
+## 4. Local test setup
 
 A mock provider server is included so the system can be tested without real API
 keys:

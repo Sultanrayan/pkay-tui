@@ -42,10 +42,14 @@ async fn main() {
 
     let config = Arc::new(config::Config::load(&config_path));
 
-    let db = match db::Database::new(&config.database.path) {
+    // Allow the database location to come from the environment (e.g. a
+    // persistent volume mounted by the platform).
+    let db_path = std::env::var("DATABASE_PATH").unwrap_or_else(|_| config.database.path.clone());
+
+    let db = match db::Database::new(&db_path) {
         Ok(d) => Arc::new(d),
         Err(e) => {
-            eprintln!("[db] failed to open database '{}': {e}", config.database.path);
+            eprintln!("[db] failed to open database '{db_path}': {e}");
             std::process::exit(1);
         }
     };
@@ -79,7 +83,7 @@ async fn main() {
     };
 
     println!("[proxy] API Pooling System proxy listening on http://{addr}");
-    println!("[proxy] database: {}", config.database.path);
+    println!("[proxy] database: {db_path}");
     println!("[proxy] load balancer: {}", config.proxy.load_balancer);
     println!("[proxy] bot protection: {}",
         if config.bot_protection.enabled { "enabled" } else { "disabled" });
