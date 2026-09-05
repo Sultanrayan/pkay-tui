@@ -542,6 +542,13 @@ The system described above is implemented in this repository. See `docs/architec
 
 **Stack:** Rust core (`rust-core/`, axum + reqwest + rusqlite/SQLite) · Java admin (`java-admin/`, JDK 17 + Maven, sqlite-jdbc + Gson) · shared SQLite database (`database/db.sqlite`, schema in `database/schema.sql`).
 
+**Key behaviors implemented:**
+- **Streaming responses** — upstream bodies (SSE / chat completions) are relayed to the client as they arrive; only retriable error responses are buffered for failover.
+- **Third-party providers** — `add-provider` accepts any base URL (OpenAI-compatible reseller endpoints). Keys can use a custom auth header via `add-key --auth-header <header>` (e.g. `x-goog-api-key` for Gemini-style APIs); the default is `Authorization: Bearer`.
+- **Your own model list** — add models one at a time with `add-model`, or upload a whole list from a file with `import-models --provider <name> --file <path>` (JSON array / `{"models": [...]}` / one model per line).
+- **Load balancing + failover** — round-robin or least-connections across active provider keys, with automatic failover on 401/403/429/5xx.
+- **Bot protection, rate limiting, health checks, usage counters and logs** in the shared SQLite store.
+
 **Build & run** (run from the project root):
 
 ```bash
@@ -563,16 +570,22 @@ java -jar java-admin/target/api-pool-admin.jar --tui
 
 ```bash
 java -jar java-admin/target/api-pool-admin.jar login --username admin --password admin
-java -jar java-admin/target/api-pool-admin.jar add-provider --name openai --url https://api.openai.com
-java -jar java-admin/target/api-pool-admin.jar add-key --provider openai --key sk-...
+# add a third-party provider (any OpenAI-compatible base URL works)
+java -jar java-admin/target/api-pool-admin.jar add-provider --name openrouter --url https://openrouter.ai/api/v1
+# upload your own model list
+java -jar java-admin/target/api-pool-admin.jar import-models --provider openrouter --file database/models.json.example
+java -jar java-admin/target/api-pool-admin.jar add-key --provider openrouter --key sk-or-...
 java -jar java-admin/target/api-pool-admin.jar add-user --username alice --password secret
 java -jar java-admin/target/api-pool-admin.jar generate-key --user alice --tier premium
 ```
 
+**Deployment (Railway):** the repo ships a `Dockerfile` and `railway.json`. The proxy is deployed as a container at **https://pkay-tui-production.up.railway.app** with a persistent volume (`pkay-tui-volume` at `/data`) and `DATABASE_PATH=/data/db.sqlite`. It honors the `$PORT` env var and exposes `GET /health` for platform health checks. Redeploy with `railway up -y -d --service pkay-tui`. Note: the deployed instance keeps its own database on the volume — populating it remotely (providers/keys/users) is future work (see `docs/api.md`).
+
 **Notes / deviations from the spec:**
-- `database/schema.sql` uses `max_limit` instead of `limit` (reserved word) and adds a `models` table for the `add-model` command.
+- `database/schema.sql` uses `max_limit` instead of `limit` (reserved word), adds a `models` table (for `add-model` / `import-models`) and an `auth_header` column on `provider_keys`.
 - The runtime database is SQLite (README diagrams also mention Postgres/Redis; those are deployment options, not implemented).
-- A mock provider server for local testing ships in `scripts/mock_server.py`.
+- Providers are third-party endpoints, not the official API sources; model lists are admin-defined.
+- A mock provider server for local testing ships in `scripts/mock_server.py` (includes an `/sse` endpoint to demonstrate streaming).
 - Java/Maven are not bundled with the repo — install JDK 17+ and Maven 3.8+ to build the admin layer.
 
 ---
