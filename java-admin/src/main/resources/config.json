@@ -1,0 +1,36 @@
+{
+  "proxy": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "trust_x_forwarded_for": true,
+    "load_balancer": "round_robin"
+  },
+  "database": {
+    "path": "database/db.sqlite"
+  },
+  "admin": {
+    "username": "admin",
+    "password": "admin",
+    "token_duration_days": 7
+  },
+  "defaults": {
+    "key_expiry_days": 30,
+    "default_key_limit": 60
+  },
+  "rate_limits": {
+    "window_seconds": 60,
+    "max_requests_per_ip": 120,
+    "max_requests_per_key": 60
+  },
+  "bot_protection": {
+    "enabled": true,
+    "max_attempts_per_minute": 100,
+    "block_minutes": 60,
+    "whitelist": [],
+    "blacklist": []
+  },
+  "health": {
+    "interval_seconds": 300,
+    "timeout_ms": 5000
+  }
+}

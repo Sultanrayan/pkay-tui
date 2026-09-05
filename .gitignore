@@ -1,0 +1,16 @@
+# Build artifacts
+rust-core/target/
+java-admin/target/
+
+# Local database + admin session (any location)
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.admin_session
+
+# Railway local link state
+.railway/
+
+# Logs / misc
+*.log
+.DS_Store

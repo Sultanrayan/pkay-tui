@@ -1,0 +1,46 @@
+{
+  "_comment": "Sample seed data for the API Pooling System. This file is documentation only - the system does not auto-load it. Use the Java admin CLI/TUI commands (add-provider, add-key, add-user, generate-key, import-models) instead. Providers are typically THIRD-PARTY resellers with OpenAI-compatible endpoints, not the official API sources.",
+  "providers": [
+    {
+      "name": "openrouter",
+      "base_url": "https://openrouter.ai/api/v1",
+      "note": "Aggregates many models behind one OpenAI-compatible API"
+    },
+    {
+      "name": "groq",
+      "base_url": "https://api.groq.com/openai/v1",
+      "note": "Fast inference, OpenAI-compatible"
+    },
+    {
+      "name": "together",
+      "base_url": "https://api.together.xyz/v1",
+      "note": "OpenAI-compatible hosted models"
+    },
+    {
+      "name": "deepinfra",
+      "base_url": "https://api.deepinfra.com/v1/openai",
+      "note": "OpenAI-compatible hosted models"
+    },
+    {
+      "name": "novita",
+      "base_url": "https://api.novita.ai/v3/openai",
+      "note": "OpenAI-compatible hosted models"
+    }
+  ],
+  "models_file": "database/models.json.example",
+  "provider_keys": [
+    {
+      "provider": "openrouter",
+      "key": "sk-or-REPLACE_ME",
+      "model": null,
+      "auth_header": null
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "password": "admin",
+      "tier": "admin"
+    }
+  ]
+}
